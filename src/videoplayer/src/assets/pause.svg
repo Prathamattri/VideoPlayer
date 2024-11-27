@@ -1,4 +1,5 @@
-<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">
-	<line x1="35" y1="25" x2="35" y2="75" style="stroke-width:10;stroke:white;"/>
-	<line x1="65" y1="25" x2="65" y2="75" style="stroke-width:10;stroke:white;"/>
+<?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+<svg width="800px" height="800px" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M7 1H2V15H7V1Z" fill="#FFFFFF"/>
+<path d="M14 1H9V15H14V1Z" fill="#FFFFFF"/>
 </svg>

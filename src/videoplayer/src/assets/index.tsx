@@ -1,5 +1,8 @@
 import PlayIcon from "./play.svg"
 import PauseIcon from "./pause.svg"
 import ReplayIcon from "./replay.svg"
+import PipIcon from "./pip.svg"
+import FullScreen from "./fullscreen.svg"
+import ExitFullScreen from "./exit_fullscreen.svg"
 
-export { PlayIcon, PauseIcon, ReplayIcon }
+export { PlayIcon, PauseIcon, ReplayIcon, PipIcon, FullScreen, ExitFullScreen }

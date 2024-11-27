@@ -1,12 +1,14 @@
-import { createContext, MouseEvent, ReactNode, useContext, useEffect, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import "./index.css"
-import { PlayIcon, PauseIcon, ReplayIcon } from "./assets/"
+import { PlayIcon, PauseIcon, ReplayIcon, PipIcon, FullScreen, ExitFullScreen } from "./assets/"
 
-interface VideoPlayerPropTypes {
+type VideoPlayerPropTypes = {
 	src: string,
+	spriteSrc: string,
 	type: "video/x-msvideo" | "video/mp4" | "video/mpeg" | "video/ogg" | "video/mp2t" | "video/webm" | "video/3gpp" | "video/3gpp2",
 	chapters?: Chapter[],
 	previewTilesUrl?: string
+	previewTileDimension?: number
 	style?: React.CSSProperties
 }
 
@@ -36,7 +38,8 @@ type VideoSharedContextTypes = {
 		fullwidth: number,
 		currentWidth: number
 	}>>,
-	videoRef: React.MutableRefObject<HTMLVideoElement | null>
+	videoRef: React.MutableRefObject<HTMLVideoElement | null>,
+	spriteSrc: string
 }
 
 const VideoMetadataContext = createContext<VideoSharedContextTypes | null>(null)
@@ -55,6 +58,7 @@ function calculateDuration(duration: number): string {
 /**This is the main component of the custom react video player */
 export default function VideoPlayer({
 	src,
+	spriteSrc,
 	type,
 	style,
 	chapters
@@ -68,6 +72,12 @@ export default function VideoPlayer({
 		atPointerTime: 0,
 		currentChapter: ""
 	})
+	const [videoCurrentState, setVideoCurrentState] = useState({
+		playState: "pause",
+		volumeLevel: 1,
+		fullScreen: false,
+		playbackRate: 1
+	});
 
 	const [videoProgressProps, setVideoProgressProps] = useState({
 		fullwidth: 0,
@@ -77,12 +87,13 @@ export default function VideoPlayer({
 	const [playPauseToggleIcon, setPlayPauseToggleIcon] = useState(<img src={PlayIcon} alt="Play Icon" />);
 
 	// Creating value context for avoiding props chain
-	const videoMetadataContextValue: VideoSharedContextTypes = {
+	const videoSharedContextValue: VideoSharedContextTypes = {
 		videoMetadata: videoMetadata,
 		setVideoMetadata: setVideoMetadata,
 		progressBarProps: videoProgressProps,
 		setProgressBarProps: setVideoProgressProps,
-		videoRef: videoRef
+		videoRef: videoRef,
+		spriteSrc: spriteSrc
 	}
 
 
@@ -95,20 +106,24 @@ export default function VideoPlayer({
 		})
 
 		videoRef.current?.addEventListener("waiting", function() {
-			console.log("waiting");
-			setPlayState("pause");
+			setVideoCurrentState(prevState => ({
+				...prevState,
+				playState: "pause",
+			}));
 		})
 		videoRef.current?.addEventListener("playing", function() {
-			setPlayState("play");
+			setVideoCurrentState(prevState => ({
+				...prevState,
+				playState: "play"
+			}));
 		})
 		videoRef.current?.addEventListener("timeupdate", function() {
 			if (videoRef.current == undefined) return;
 			const time = videoRef.current.currentTime
-			if (time - videoMetadata.currentTime >= 1)
-				setVideoMetadata(prevState => ({
-					...prevState,
-					currentTime: time
-				}))
+			setVideoMetadata(prevState => ({
+				...prevState,
+				currentTime: time
+			}))
 		})
 
 		return () => {
@@ -118,7 +133,7 @@ export default function VideoPlayer({
 
 	useEffect(() => {
 		handleVideoState();
-	}, [playState]);
+	}, [videoCurrentState.playState]);
 
 
 	/** @function handleVideoState
@@ -126,7 +141,7 @@ export default function VideoPlayer({
 	 * using the current playState
 	 */
 	function handleVideoState() {
-		switch (playState) {
+		switch (videoCurrentState.playState) {
 			case "play":
 				videoRef.current?.play();
 				setPlayPauseToggleIcon(<img src={PauseIcon} alt="Pause Icon" />);
@@ -137,6 +152,7 @@ export default function VideoPlayer({
 				break;
 			case "replay":
 				setPlayPauseToggleIcon(<img src={ReplayIcon} alt="Play Icon" />);
+				break;
 			default:
 				setPlayPauseToggleIcon(<img src={PauseIcon} alt="Pause Icon" />);
 		}
@@ -147,46 +163,100 @@ export default function VideoPlayer({
 	 * Toggle PlayState variable on when used
 	 */
 	function togglePlayState() {
-		switch (playState) {
-			case "play":
+		switch (videoCurrentState.playState) {
 			case "waiting":
-				setPlayState("pause");
+			case "play":
+				setVideoCurrentState(prevState => ({
+					...prevState,
+					playState: "pause"
+				}));
 				break;
 			case "pause":
 			case "replay":
-				setPlayState("play");
+				setVideoCurrentState(prevState => ({
+					...prevState,
+					playState: "play"
+				}));
 				break;
 			default:
 				throw Error("Unexpected input recieved")
 		}
 	}
+
+
+	/**
+	 * @function toggleFullScreen
+	 */
+	function toggleFullScreen() {
+		switch (videoCurrentState.fullScreen) {
+			case true:
+				document.exitFullscreen()
+				setVideoCurrentState(prevState => ({
+					...prevState,
+					fullScreen: false
+				}));
+				break;
+			case false:
+				document.getElementById("videoplayer")?.requestFullscreen();
+				setVideoCurrentState(prevState => ({
+					...prevState,
+					fullScreen: true
+				}));
+				break;
+			default:
+				throw new Error("Unable to toggle fullscreen state");
+		}
+	}
+
 	return (
-		<VideoMetadataContext.Provider value={videoMetadataContextValue}>
-			<div className="videoplayer" style={style} onDoubleClick={(e) => e.currentTarget.requestFullscreen()}>
-				<video ref={videoRef} onEnded={() => {
-					setPlayState("replay");
-				}}>
+		<VideoMetadataContext.Provider value={videoSharedContextValue}>
+			<div className="videoplayer" id="videoplayer" style={style} onDoubleClick={toggleFullScreen}>
+				<video
+					ref={videoRef}
+					onClick={() => {
+						togglePlayState()
+					}}
+					onEnded={() => {
+						setVideoCurrentState(prevState => ({
+							...prevState,
+							playState: "replay"
+						}));
+					}}>
 					<source src={src} type={type} />
 				</video>
-				<button className="play loader" data-icon="P" aria-label="play pause toggle" onClick={togglePlayState}>
-					{playPauseToggleIcon}
-				</button>
 				<div className="controls-group">
 					<div className="video-buttons">
-						{
-							<button className="play" data-icon="P" aria-label="play pause toggle" onClick={togglePlayState}>
+						<div className="btn-group">
+							<button className="player-btn-xs" data-icon="P" aria-label="play pause toggle" onClick={togglePlayState}>
 								{playPauseToggleIcon}
 							</button>
+							<time>
+								{calculateDuration(videoMetadata.currentTime)}
+							</time>
+							/
+							<time>
+								{calculateDuration(videoMetadata.duration)}
+							</time>
+						</div>
+						<div className="btn-group">
+							<button className="player-btn-xs" onClick={() => videoRef.current?.requestPictureInPicture()}>
+								<img src={PipIcon} alt="Picture in Picture icon" />
+							</button>
+							{
+								videoCurrentState.fullScreen == false ?
+									<button className="player-btn-xs" onClick={toggleFullScreen}>
+										<img src={FullScreen} alt="Picture in Picture icon" />
+									</button>
 
-						}
-						<time>
-							{calculateDuration(videoMetadata.currentTime)}
-						</time>
-						/
-						<time>
-							{calculateDuration(videoMetadata.duration)}
-						</time>
+									:
+
+									<button className="player-btn-xs" onClick={toggleFullScreen}>
+										<img src={ExitFullScreen} alt="Picture in Picture icon" />
+									</button>
+							}
+						</div>
 					</div>
+
 					<div className="progress-bar" >
 						{
 							chapters !== undefined &&
@@ -227,8 +297,6 @@ function ChaptersOverlay({ data, totalDuration }: { data: Chapter[], totalDurati
 			widthOfChapterBar = chapterDuration * 100 / totalDuration;
 		}
 		return <ChapterContainer chapter={chapter} props={{ widthOfChapterBar, chapterDuration }} key={idx} />
-
-
 	});
 
 	/**Thumbnail are extracted from sprites in 11x11 grid
@@ -253,7 +321,7 @@ function ChaptersOverlay({ data, totalDuration }: { data: Chapter[], totalDurati
 			>
 				<div className="player-chapter-thumbnail"
 					style={{
-						background: "url('http://localhost:8080/test_sprite2.jpeg')", backgroundSize: thumbnailBackgroundSize, backgroundPosition: thumbnailBackgroundPos
+						background: `url('${video_ctx?.spriteSrc}')`, backgroundSize: thumbnailBackgroundSize, backgroundPosition: thumbnailBackgroundPos
 					}}
 				>
 				</div>
@@ -291,3 +359,4 @@ function ChapterContainer({ chapter, props }: { chapter: Chapter, props: { chapt
 		</div >
 	);
 }
+

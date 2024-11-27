@@ -28,6 +28,7 @@ function App() {
       <VideoPlayer
         type='video/mp4'
         src='http://localhost:8080/test_video.mp4'
+        spriteSrc='http://localhost:8080/test_sprite2.jpeg'
         style={{ maxWidth: "80vw" }}
         chapters={videoChapters}
       />

@@ -11,6 +11,23 @@
 
 	background-color: black;
 
+	& .player-btn-xs {
+		all: unset;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		contain: content;
+		width: 30px;
+		aspect-ratio: 1;
+
+		cursor: pointer;
+
+		&>img {
+			width: 60%;
+			height: 60%;
+		}
+	}
+
 	&:hover :where(.controls-group) {
 		opacity: 1;
 		visibility: visible;
@@ -43,28 +60,21 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.2rem;
-	width: 100%;
 	padding: 0.5rem;
+	width: 100%;
 	background-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.56) 25%, rgba(0, 0, 0, 0.86) 100%);
 	transition: opacity 150ms ease-in;
 
-	& button {
-		all: unset;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		contain: content;
-		width: 30px;
-		aspect-ratio: 1;
-
-		&>img {
-			width: 100%;
-			height: 100%;
-		}
-	}
 }
 
 .controls-group .video-buttons {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.video-buttons .btn-group {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
