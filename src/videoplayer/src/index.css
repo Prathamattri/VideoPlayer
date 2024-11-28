@@ -1,4 +1,9 @@
+:root {
+	interpolate-size: allow-keywords;
+}
+
 .videoplayer {
+	--transition-duration: 0.3s;
 	background: white;
 	contain: content;
 	display: flex;
@@ -80,6 +85,33 @@
 	gap: 0.5rem;
 }
 
+.audio-ctrl-group {
+
+	display: flex;
+	align-items: center;
+
+	&>.player-btn-xs {
+		flex-grow: 1;
+	}
+
+	& input[type="range"] {
+		display: block;
+		flex-grow: 1;
+		content-visibility: hidden;
+		width: 0;
+
+		transition-property: inline-size, content-visibilty;
+		transition-duration: var(--transition-duration);
+		transition-behavior: allow-discrete;
+	}
+
+	&:hover input[type="range"] {
+		width: 125px;
+		content-visibility: visible;
+	}
+}
+
+
 .progress-bar {
 	--height: 12px;
 
@@ -107,7 +139,7 @@
 			& .player-chapter-progress {
 				background-color: #ff0040;
 				height: calc(var(--height)/2);
-				transition: transform 0.3s;
+				transition: transform var(--transition-duration);
 
 			}
 		}
@@ -150,7 +182,7 @@
 	opacity: 0;
 
 	transition-property: opacity, content-visibility;
-	transition-duration: 0.3s;
+	transition-duration: var(--transition-duration);
 	transition-behavior: allow-discrete;
 
 	&:before {

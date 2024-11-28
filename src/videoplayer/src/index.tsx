@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 import "./index.css"
-import { PlayIcon, PauseIcon, ReplayIcon, PipIcon, FullScreen, ExitFullScreen } from "./assets/"
+import { PlayIcon, PauseIcon, ReplayIcon, PipIcon, FullScreen, ExitFullScreen, AudioPrimary, AudioOff } from "./assets/"
 
 type VideoPlayerPropTypes = {
 	src: string,
@@ -45,6 +45,7 @@ type VideoSharedContextTypes = {
 const VideoMetadataContext = createContext<VideoSharedContextTypes | null>(null)
 
 /**
+ * @function calculateDuration
  * @param duration Duration in seconds
  */
 function calculateDuration(duration: number): string {
@@ -65,7 +66,6 @@ export default function VideoPlayer({
 }: VideoPlayerPropTypes
 ) {
 	const videoRef = useRef<HTMLVideoElement | null>(null)
-	const [playState, setPlayState] = useState("pause");
 	const [videoMetadata, setVideoMetadata] = useState({
 		currentTime: 0,
 		duration: 0,
@@ -160,7 +160,7 @@ export default function VideoPlayer({
 
 	/** @function togglePlayState
 	 * @description 
-	 * Toggle PlayState variable on when used
+	 * Toggle VideoCurrentState.PlayState variable when used
 	 */
 	function togglePlayState() {
 		switch (videoCurrentState.playState) {
@@ -186,6 +186,8 @@ export default function VideoPlayer({
 
 	/**
 	 * @function toggleFullScreen
+	 * @description
+	 * Toggle Full Screen state on use
 	 */
 	function toggleFullScreen() {
 		switch (videoCurrentState.fullScreen) {
@@ -208,6 +210,50 @@ export default function VideoPlayer({
 		}
 	}
 
+	/**
+	 * @function changeAudioVolume
+	 * @description
+	 * Toggle Audio Muted state
+	 * @param volumeLevel 
+	 */
+	function changeAudioVolume(volumeLevel?: number) {
+		if (videoRef.current)
+			if (volumeLevel) {
+				// User is trying to change volume using slider
+
+				videoRef.current.volume = volumeLevel
+				setVideoCurrentState(prevState => ({
+					...prevState,
+					volumeLevel: volumeLevel
+				}));
+			} else
+				// User is trying to change volume using icon
+				// toggling volume based on current volume level
+				switch (videoCurrentState.volumeLevel) {
+					case 0:
+						videoRef.current.volume = 0.5
+						setVideoCurrentState(prevState => ({
+							...prevState,
+							volumeLevel: 0.5
+						}));
+						break;
+					default:
+						videoRef.current.volume = 0
+						setVideoCurrentState(prevState => ({
+							...prevState,
+							volumeLevel: 0
+						}));
+				}
+	}
+	function changeVideoPlaybackRate(playbackRate: number) {
+		if (videoRef.current) {
+			setVideoCurrentState(prevVal => ({
+				...prevVal,
+				playbackRate: playbackRate
+			}))
+			videoRef.current.playbackRate = playbackRate
+		}
+	}
 	return (
 		<VideoMetadataContext.Provider value={videoSharedContextValue}>
 			<div className="videoplayer" id="videoplayer" style={style} onDoubleClick={toggleFullScreen}>
@@ -237,21 +283,41 @@ export default function VideoPlayer({
 							<time>
 								{calculateDuration(videoMetadata.duration)}
 							</time>
+							<div className="audio-ctrl-group">
+								<div className="player-btn-xs" onClick={() => changeAudioVolume()}>
+									{
+										videoCurrentState.volumeLevel == 0 ?
+											<img src={AudioOff} srcSet="Audio Icon" />
+											:
+											<img src={AudioPrimary} srcSet="Audio Icon" />
+									}
+								</div>
+								<input type="range" step={0.05} max={1} min={0} value={videoCurrentState.volumeLevel} onChange={(e) => changeAudioVolume(e.target.valueAsNumber)} />
+							</div>
 						</div>
 						<div className="btn-group">
+							<select className="speed-ctrl" onChange={(e) => changeVideoPlaybackRate(parseFloat(e.currentTarget.value))} defaultValue={videoCurrentState.playbackRate}>
+								<option value={0.25} >0.25x</option>
+								<option value={0.5} >0.5x</option>
+								<option value={1}>1x</option>
+								<option value={1.5} >1.5x</option>
+								<option value={1.75} >1.75x</option>
+								<option value={2} >2x</option>
+								<option value={3} >3x</option>
+							</select>
 							<button className="player-btn-xs" onClick={() => videoRef.current?.requestPictureInPicture()}>
 								<img src={PipIcon} alt="Picture in Picture icon" />
 							</button>
 							{
 								videoCurrentState.fullScreen == false ?
 									<button className="player-btn-xs" onClick={toggleFullScreen}>
-										<img src={FullScreen} alt="Picture in Picture icon" />
+										<img src={FullScreen} alt="FullScreen Icon" />
 									</button>
 
 									:
 
 									<button className="player-btn-xs" onClick={toggleFullScreen}>
-										<img src={ExitFullScreen} alt="Picture in Picture icon" />
+										<img src={ExitFullScreen} alt="Exit FullScreen Icon" />
 									</button>
 							}
 						</div>
@@ -359,4 +425,5 @@ function ChapterContainer({ chapter, props }: { chapter: Chapter, props: { chapt
 		</div >
 	);
 }
+
 

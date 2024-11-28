@@ -8,5 +8,5 @@
     "strict": true,                                      
     "skipLibCheck": true                                 
   },
-  "includes": ["src"]
+  "includes": ["src", "svg.d.ts"],
 }
