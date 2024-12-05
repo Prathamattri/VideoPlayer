@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Prathamattri/videoplayer.git",
+    "url": "git+https://github.com/Prathamattri/VideoPlayer.git",
     "directory": "src/videoplayer"
   },
   "author": "Pratham Attri",

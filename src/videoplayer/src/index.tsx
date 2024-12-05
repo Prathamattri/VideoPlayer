@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import "./index.css"
 import { PlayIcon, PauseIcon, ReplayIcon, PipIcon, FullScreen, ExitFullScreen, AudioPrimary, AudioOff } from "./assets/"
 
@@ -17,6 +17,7 @@ export type Chapter = {
 	title: string
 }
 
+
 type VideoSharedContextTypes = {
 	videoMetadata: {
 		currentTime: number,
@@ -29,14 +30,6 @@ type VideoSharedContextTypes = {
 		duration: number,
 		atPointerTime: number,
 		currentChapter: string,
-	}>>,
-	progressBarProps: {
-		fullwidth: number,
-		currentWidth: number
-	},
-	setProgressBarProps: React.Dispatch<React.SetStateAction<{
-		fullwidth: number,
-		currentWidth: number
 	}>>,
 	videoRef: React.MutableRefObject<HTMLVideoElement | null>,
 	spriteSrc: string
@@ -79,19 +72,12 @@ export default function VideoPlayer({
 		playbackRate: 1
 	});
 
-	const [videoProgressProps, setVideoProgressProps] = useState({
-		fullwidth: 0,
-		currentWidth: 0
-	}
-	)
 	const [playPauseToggleIcon, setPlayPauseToggleIcon] = useState(<img src={PlayIcon} alt="Play Icon" />);
 
 	// Creating value context for avoiding props chain
 	const videoSharedContextValue: VideoSharedContextTypes = {
 		videoMetadata: videoMetadata,
 		setVideoMetadata: setVideoMetadata,
-		progressBarProps: videoProgressProps,
-		setProgressBarProps: setVideoProgressProps,
 		videoRef: videoRef,
 		spriteSrc: spriteSrc
 	}
@@ -132,40 +118,58 @@ export default function VideoPlayer({
 	}, [])
 
 	useEffect(() => {
-		handleVideoState();
-	}, [videoCurrentState.playState]);
+		/** @function handleKeyDown
+		 * @description Responsible for working with videoplayer state on keypress
+		 */
+		const handleKeyDown = (e: KeyboardEvent) => {
+			switch (e.key) {
+				case "k":
+				case " ":
+					togglePlayState()
+					break;
+				case "f":
+					toggleFullScreen();
+					break;
+				case "m":
+					changeAudioVolume();
+					break;
+			}
+			if (e.key <= "9" && e.key >= "0") {
+				let newTime = videoMetadata.duration * 0.1 * parseInt(e.key)
+				setVideoMetadata(prevData => ({
+					...prevData,
+					currentTime: newTime
+				}))
+				if (videoRef.current != null)
+					videoRef.current.currentTime = newTime
+			}
 
 
-	/** @function handleVideoState
-	 * @description Responsible for changing the play pause toggle icon
-	 * using the current playState
-	 */
-	function handleVideoState() {
-		switch (videoCurrentState.playState) {
-			case "play":
-				videoRef.current?.play();
-				setPlayPauseToggleIcon(<img src={PauseIcon} alt="Pause Icon" />);
-				break;
-			case "pause":
-				videoRef.current?.pause();
-				setPlayPauseToggleIcon(<img src={PlayIcon} alt="Play Icon" />);
-				break;
-			case "replay":
-				setPlayPauseToggleIcon(<img src={ReplayIcon} alt="Play Icon" />);
-				break;
-			default:
-				setPlayPauseToggleIcon(<img src={PauseIcon} alt="Pause Icon" />);
 		}
-	}
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown)
+		}
+	}, [videoCurrentState]);
+
 
 	/** @function togglePlayState
 	 * @description 
 	 * Toggle VideoCurrentState.PlayState variable when used
 	 */
-	function togglePlayState() {
-		switch (videoCurrentState.playState) {
+	function togglePlayState(playState?: string) {
+		if (!playState) playState = videoCurrentState.playState
+		switch (playState) {
 			case "waiting":
+				setVideoCurrentState(prevState => ({
+					...prevState,
+					playState: "pause"
+				}));
+				break;
 			case "play":
+				videoRef.current?.pause();
+				setPlayPauseToggleIcon(<img src={PlayIcon} alt="Play Icon" />);
 				setVideoCurrentState(prevState => ({
 					...prevState,
 					playState: "pause"
@@ -173,6 +177,8 @@ export default function VideoPlayer({
 				break;
 			case "pause":
 			case "replay":
+				videoRef.current?.play();
+				setPlayPauseToggleIcon(<img src={PauseIcon} alt="Pause Icon" />);
 				setVideoCurrentState(prevState => ({
 					...prevState,
 					playState: "play"
@@ -189,7 +195,7 @@ export default function VideoPlayer({
 	 * @description
 	 * Toggle Full Screen state on use
 	 */
-	function toggleFullScreen() {
+	const toggleFullScreen = useCallback(() => {
 		switch (videoCurrentState.fullScreen) {
 			case true:
 				document.exitFullscreen()
@@ -208,7 +214,7 @@ export default function VideoPlayer({
 			default:
 				throw new Error("Unable to toggle fullscreen state");
 		}
-	}
+	}, [videoCurrentState.fullScreen])
 
 	/**
 	 * @function changeAudioVolume
@@ -216,7 +222,7 @@ export default function VideoPlayer({
 	 * Toggle Audio Muted state
 	 * @param volumeLevel 
 	 */
-	function changeAudioVolume(volumeLevel?: number) {
+	const changeAudioVolume = useCallback(function(volumeLevel?: number) {
 		if (videoRef.current)
 			if (volumeLevel) {
 				// User is trying to change volume using slider
@@ -224,7 +230,7 @@ export default function VideoPlayer({
 				videoRef.current.volume = volumeLevel
 				setVideoCurrentState(prevState => ({
 					...prevState,
-					volumeLevel: volumeLevel
+					volumeLevel: Math.min(Math.max(volumeLevel, 0), 1)
 				}));
 			} else
 				// User is trying to change volume using icon
@@ -244,7 +250,14 @@ export default function VideoPlayer({
 							volumeLevel: 0
 						}));
 				}
-	}
+	}, [videoCurrentState.volumeLevel])
+
+	/**
+	 * @function changeVideoPlaybackRate
+	 * @description
+	 * Change plaback speed of video
+	 * @param playbackRate 
+	 */
 	function changeVideoPlaybackRate(playbackRate: number) {
 		if (videoRef.current) {
 			setVideoCurrentState(prevVal => ({
@@ -263,6 +276,7 @@ export default function VideoPlayer({
 						togglePlayState()
 					}}
 					onEnded={() => {
+						setPlayPauseToggleIcon(<img src={ReplayIcon} alt="Play Icon" />);
 						setVideoCurrentState(prevState => ({
 							...prevState,
 							playState: "replay"
@@ -273,7 +287,7 @@ export default function VideoPlayer({
 				<div className="controls-group">
 					<div className="video-buttons">
 						<div className="btn-group">
-							<button className="player-btn-xs" data-icon="P" aria-label="play pause toggle" onClick={togglePlayState}>
+							<button className="player-btn-xs" data-icon="P" aria-label="play pause toggle" onClick={() => togglePlayState()}>
 								{playPauseToggleIcon}
 							</button>
 							<time>
@@ -365,7 +379,7 @@ function ChaptersOverlay({ data, totalDuration }: { data: Chapter[], totalDurati
 		return <ChapterContainer chapter={chapter} props={{ widthOfChapterBar, chapterDuration }} key={idx} />
 	});
 
-	/**Thumbnail are extracted from sprites in 11x11 grid
+	/**Thumbnail are extracted from sprites in 10x10 grid
 		*our thumbnail size in CSS : 160px / 90px
 		*/
 	const thumbnailBackgroundSize = "1600px 900px"
