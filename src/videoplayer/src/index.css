@@ -27,6 +27,10 @@
 
 		cursor: pointer;
 
+		&:focus {
+			outline: 0.20em solid white;
+		}
+
 		&>img {
 			width: 60%;
 			height: 60%;
@@ -44,6 +48,61 @@
 		padding: 0;
 	}
 
+}
+
+.chapter-list-container {
+	position: relative;
+
+	& ul.chapters-list {
+		position: absolute;
+		bottom: 2.4rem;
+		right: 50%;
+		transform: translateX(40%);
+		width: 200px;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		text-align: left;
+		align-items: flex-start;
+		gap: 0.25em;
+		background: #0e0e0e;
+		transition: opacity 200ms ease-in-out;
+		max-height: 200px;
+		overflow-y: auto;
+
+		&>li {
+			padding: 0.7rem;
+			font-size: 14px;
+			box-shadow: 0 0 0 4px black;
+			cursor: pointer;
+			width: 100%;
+
+			&:hover {
+				background: #a0a0a0;
+			}
+
+			&>button {
+				all: unset;
+				width: 100%;
+				min-height: 25px;
+
+				&:focus-visible {
+					outline: 2px solid white;
+				}
+			}
+
+		}
+
+		&.hide-chapters {
+			opacity: 0;
+			visibility: hidden;
+		}
+
+		&.show-chapters {
+			opacity: 1;
+			visibility: visible;
+		}
+	}
 }
 
 .loader {

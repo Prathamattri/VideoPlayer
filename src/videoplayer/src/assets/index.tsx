@@ -1,10 +1,11 @@
-import PlayIcon from "./play.svg"
-import PauseIcon from "./pause.svg"
-import ReplayIcon from "./replay.svg"
-import PipIcon from "./pip.svg"
-import FullScreen from "./fullscreen.svg"
-import ExitFullScreen from "./exit_fullscreen.svg"
-import AudioPrimary from "./audio_primary.svg"
-import AudioOff from "./audio_off.svg"
+import PlayIconSvg from "./play.svg"
+import PauseIconSvg from "./pause.svg"
+import ReplayIconSvg from "./replay.svg"
+import PipIconSvg from "./pip.svg"
+import FullScreenSvg from "./fullscreen.svg"
+import ExitFullScreenSvg from "./exit_fullscreen.svg"
+import AudioPrimarySvg from "./audio_primary.svg"
+import AudioOffSvg from "./audio_off.svg"
+import ChaptersSvg from "./chapters.svg"
 
-export { PlayIcon, PauseIcon, ReplayIcon, PipIcon, FullScreen, ExitFullScreen, AudioOff, AudioPrimary }
+export { PlayIconSvg, PauseIconSvg, ReplayIconSvg, PipIconSvg, FullScreenSvg, ExitFullScreenSvg, AudioOffSvg, AudioPrimarySvg, ChaptersSvg }

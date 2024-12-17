@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import "./index.css"
-import { PlayIcon, PauseIcon, ReplayIcon, PipIcon, FullScreen, ExitFullScreen, AudioPrimary, AudioOff } from "./assets/"
+import { PlayIconSvg, PauseIconSvg, ChaptersSvg, PipIconSvg, AudioOffSvg, AudioPrimarySvg, FullScreenSvg, ExitFullScreenSvg, ReplayIconSvg } from "./assets/"
 
 type VideoPlayerPropTypes = {
 	src: string,
@@ -72,7 +72,7 @@ export default function VideoPlayer({
 		playbackRate: 1
 	});
 
-	const [playPauseToggleIcon, setPlayPauseToggleIcon] = useState(<img src={PlayIcon} alt="Play Icon" />);
+	const [playPauseToggleIcon, setPlayPauseToggleIcon] = useState(<img src={PlayIconSvg} alt="Play Icon" />);
 
 	// Creating value context for avoiding props chain
 	const videoSharedContextValue: VideoSharedContextTypes = {
@@ -111,6 +111,7 @@ export default function VideoPlayer({
 				currentTime: time
 			}))
 		})
+		console.log({ spriteSrc, src })
 
 		return () => {
 			videoRef.current?.removeEventListener("loadedmetadata", () => { })
@@ -121,6 +122,7 @@ export default function VideoPlayer({
 		/** @function handleKeyDown
 		 * @description Responsible for working with videoplayer state on keypress
 		 */
+		let newVolume: number
 		const handleKeyDown = (e: KeyboardEvent) => {
 			switch (e.key) {
 				case "k":
@@ -133,6 +135,15 @@ export default function VideoPlayer({
 				case "m":
 					changeAudioVolume();
 					break;
+				case "ArrowUp":
+					newVolume = videoCurrentState.volumeLevel + 0.05
+					changeAudioVolume(newVolume);
+					break;
+				case "ArrowDown":
+					newVolume = videoCurrentState.volumeLevel - 0.05
+					changeAudioVolume(newVolume);
+					break;
+
 			}
 			if (e.key <= "9" && e.key >= "0") {
 				let newTime = videoMetadata.duration * 0.1 * parseInt(e.key)
@@ -169,7 +180,7 @@ export default function VideoPlayer({
 				break;
 			case "play":
 				videoRef.current?.pause();
-				setPlayPauseToggleIcon(<img src={PlayIcon} alt="Play Icon" />);
+				setPlayPauseToggleIcon(<img src={PlayIconSvg} alt="Play Icon" />);
 				setVideoCurrentState(prevState => ({
 					...prevState,
 					playState: "pause"
@@ -178,7 +189,7 @@ export default function VideoPlayer({
 			case "pause":
 			case "replay":
 				videoRef.current?.play();
-				setPlayPauseToggleIcon(<img src={PauseIcon} alt="Pause Icon" />);
+				setPlayPauseToggleIcon(<img src={PauseIconSvg} alt="Pause Icon" />);
 				setVideoCurrentState(prevState => ({
 					...prevState,
 					playState: "play"
@@ -276,7 +287,7 @@ export default function VideoPlayer({
 						togglePlayState()
 					}}
 					onEnded={() => {
-						setPlayPauseToggleIcon(<img src={ReplayIcon} alt="Play Icon" />);
+						setPlayPauseToggleIcon(<img src={ReplayIconSvg} alt="Play Icon" />);
 						setVideoCurrentState(prevState => ({
 							...prevState,
 							playState: "replay"
@@ -298,14 +309,14 @@ export default function VideoPlayer({
 								{calculateDuration(videoMetadata.duration)}
 							</time>
 							<div className="audio-ctrl-group">
-								<div className="player-btn-xs" onClick={() => changeAudioVolume()}>
+								<button className="player-btn-xs" onClick={() => changeAudioVolume()}>
 									{
 										videoCurrentState.volumeLevel == 0 ?
-											<img src={AudioOff} srcSet="Audio Icon" />
+											<img src={AudioOffSvg} alt="Audio Icon" />
 											:
-											<img src={AudioPrimary} srcSet="Audio Icon" />
+											<img src={AudioPrimarySvg} alt="Audio Icon" />
 									}
-								</div>
+								</button>
 								<input type="range" step={0.05} max={1} min={0} value={videoCurrentState.volumeLevel} onChange={(e) => changeAudioVolume(e.target.valueAsNumber)} />
 							</div>
 						</div>
@@ -319,19 +330,20 @@ export default function VideoPlayer({
 								<option value={2} >2x</option>
 								<option value={3} >3x</option>
 							</select>
+							<GoToChapter chapters={chapters} />
 							<button className="player-btn-xs" onClick={() => videoRef.current?.requestPictureInPicture()}>
-								<img src={PipIcon} alt="Picture in Picture icon" />
+								<img src={PipIconSvg} alt="Picture in Picture icon" />
 							</button>
 							{
 								videoCurrentState.fullScreen == false ?
 									<button className="player-btn-xs" onClick={toggleFullScreen}>
-										<img src={FullScreen} alt="FullScreen Icon" />
+										<img src={FullScreenSvg} alt="FullScreen Icon" />
 									</button>
 
 									:
 
 									<button className="player-btn-xs" onClick={toggleFullScreen}>
-										<img src={ExitFullScreen} alt="Exit FullScreen Icon" />
+										<img src={ExitFullScreenSvg} alt="Exit FullScreen Icon" />
 									</button>
 							}
 						</div>
@@ -415,10 +427,46 @@ function ChaptersOverlay({ data, totalDuration }: { data: Chapter[], totalDurati
 	)
 }
 
-function ChapterContainer({ chapter, props }: { chapter: Chapter, props: { chapterDuration: number, widthOfChapterBar: number } }) {
+function GoToChapter({ chapters }: { chapters?: Chapter[] }) {
+	const [showChapter, setShowChapter] = useState(false)
 
 	const video_ctx = useContext(VideoMetadataContext)
+	if (chapters == undefined) {
+		return <> </>
+	}
+
+	return (
+		<div className="chapter-list-container">
+			<button className="player-btn-xs" onClick={() => setShowChapter(prevVal => !prevVal)}>
+				<img src={ChaptersSvg} alt="Chapters Icon" />
+			</button>
+			<ul className={`chapters-list ${showChapter ? "show-chapters" : "hide-chapters"}`}>
+				{chapters.map((chapter, ind) => {
+					return <li key={ind}>
+						<button onClick={() => {
+
+							if (video_ctx && video_ctx.videoRef.current) {
+								video_ctx.videoRef.current.currentTime = chapter.startTime
+								video_ctx.setVideoMetadata(prevData => ({
+									...prevData,
+									currentTime: chapter.startTime
+								}))
+								setShowChapter(prevVal => !prevVal)
+							}
+						}}>
+							{chapter.title}
+						</button>
+					</li>
+				})}
+			</ul>
+		</div>
+	);
+}
+
+function ChapterContainer({ chapter, props }: { chapter: Chapter, props: { chapterDuration: number, widthOfChapterBar: number } }) {
+
 	let chapterProgressWidth = 0;
+	const video_ctx = useContext(VideoMetadataContext)
 	if (video_ctx?.videoMetadata.currentTime! > chapter.startTime)
 		chapterProgressWidth = (video_ctx?.videoMetadata.currentTime! - chapter.startTime) / props.chapterDuration * 100;
 
