@@ -71,6 +71,8 @@ export default function VideoPlayer({
 		fullScreen: false,
 		playbackRate: 1
 	});
+	const [isControlsVisible, setIsControlsVisible] = useState(false)
+	const visibilityTimeout = useRef<number | undefined>()
 
 	const [playPauseToggleIcon, setPlayPauseToggleIcon] = useState(<img src={PlayIconSvg} alt="Play Icon" />);
 
@@ -111,7 +113,6 @@ export default function VideoPlayer({
 				currentTime: time
 			}))
 		})
-		console.log({ spriteSrc, src })
 
 		return () => {
 			videoRef.current?.removeEventListener("loadedmetadata", () => { })
@@ -124,9 +125,11 @@ export default function VideoPlayer({
 		 */
 		let newVolume: number
 		const handleKeyDown = (e: KeyboardEvent) => {
+			let newTime: number
 			switch (e.key) {
 				case "k":
 				case " ":
+					e.preventDefault();
 					togglePlayState()
 					break;
 				case "f":
@@ -136,13 +139,38 @@ export default function VideoPlayer({
 					changeAudioVolume();
 					break;
 				case "ArrowUp":
-					newVolume = videoCurrentState.volumeLevel + 0.05
+					if (!videoRef.current?.paused) e.preventDefault()
+					newVolume = Math.min(Math.max(0, videoCurrentState.volumeLevel + 0.05), 1)
 					changeAudioVolume(newVolume);
 					break;
 				case "ArrowDown":
-					newVolume = videoCurrentState.volumeLevel - 0.05
+					if (!videoRef.current?.paused) e.preventDefault()
+					newVolume = Math.min(Math.max(0, videoCurrentState.volumeLevel - 0.05), 1)
 					changeAudioVolume(newVolume);
 					break;
+				case "h":
+				case "ArrowLeft":
+					console.log("arrow left")
+					newTime = Math.min(Math.max(0, videoMetadata.currentTime - 10), videoMetadata.duration)
+					setVideoMetadata(prevData => ({
+						...prevData,
+						currentTime: newTime
+					}))
+					if (videoRef.current != null)
+						videoRef.current.currentTime = newTime
+					break;
+				case "l":
+				case "ArrowRight":
+					console.log("arrow right")
+					newTime = Math.min(Math.max(0, videoMetadata.currentTime + 10), videoMetadata.duration)
+					setVideoMetadata(prevData => ({
+						...prevData,
+						currentTime: newTime
+					}))
+					if (videoRef.current != null)
+						videoRef.current.currentTime = newTime
+					break;
+
 
 			}
 			if (e.key <= "9" && e.key >= "0") {
@@ -280,7 +308,18 @@ export default function VideoPlayer({
 	}
 	return (
 		<VideoMetadataContext.Provider value={videoSharedContextValue}>
-			<div className="videoplayer" id="videoplayer" style={style} onDoubleClick={toggleFullScreen}>
+			<div className="videoplayer" id="videoplayer" style={style} onDoubleClick={toggleFullScreen} onMouseMove={(e) => {
+
+				setIsControlsVisible(true)
+				clearTimeout(visibilityTimeout.current)
+
+				if (!videoRef.current?.paused) {
+					visibilityTimeout.current = setTimeout(() => {
+						setIsControlsVisible(false)
+					}, 1000)
+				}
+
+			}}>
 				<video
 					ref={videoRef}
 					onClick={() => {
@@ -295,11 +334,12 @@ export default function VideoPlayer({
 					}}>
 					<source src={src} type={type} />
 				</video>
-				<div className="controls-group">
+				<div className={`controls-group ${isControlsVisible ? "visible" : "hidden"}`}>
 					<div className="video-buttons">
 						<div className="btn-group">
-							<button className="player-btn-xs" data-icon="P" aria-label="play pause toggle" onClick={() => togglePlayState()}>
+							<button className="player-btn-xs tool" data-icon="P" aria-label="play pause toggle" onClick={() => togglePlayState()}>
 								{playPauseToggleIcon}
+								<span className="tooltip">Play Pause Toggle</span>
 							</button>
 							<time>
 								{calculateDuration(videoMetadata.currentTime)}
@@ -309,13 +349,14 @@ export default function VideoPlayer({
 								{calculateDuration(videoMetadata.duration)}
 							</time>
 							<div className="audio-ctrl-group">
-								<button className="player-btn-xs" onClick={() => changeAudioVolume()}>
+								<button className="player-btn-xs tool" onClick={() => changeAudioVolume()}>
 									{
 										videoCurrentState.volumeLevel == 0 ?
 											<img src={AudioOffSvg} alt="Audio Icon" />
 											:
 											<img src={AudioPrimarySvg} alt="Audio Icon" />
 									}
+									<span className="tooltip">Audio Mute on/off</span>
 								</button>
 								<input type="range" step={0.05} max={1} min={0} value={videoCurrentState.volumeLevel} onChange={(e) => changeAudioVolume(e.target.valueAsNumber)} />
 							</div>
@@ -331,19 +372,22 @@ export default function VideoPlayer({
 								<option value={3} >3x</option>
 							</select>
 							<GoToChapter chapters={chapters} />
-							<button className="player-btn-xs" onClick={() => videoRef.current?.requestPictureInPicture()}>
+							<button className="player-btn-xs tool" onClick={() => videoRef.current?.requestPictureInPicture()}>
 								<img src={PipIconSvg} alt="Picture in Picture icon" />
+								<span className="tooltip">Picture in picture</span>
 							</button>
 							{
 								videoCurrentState.fullScreen == false ?
-									<button className="player-btn-xs" onClick={toggleFullScreen}>
+									<button className="player-btn-xs tool" onClick={toggleFullScreen}>
 										<img src={FullScreenSvg} alt="FullScreen Icon" />
+										<span className="tooltip">Enter Fullscreen</span>
 									</button>
 
 									:
 
-									<button className="player-btn-xs" onClick={toggleFullScreen}>
+									<button className="player-btn-xs tool" onClick={toggleFullScreen}>
 										<img src={ExitFullScreenSvg} alt="Exit FullScreen Icon" />
+										<span className="tooltip">Exit Fullscreen</span>
 									</button>
 							}
 						</div>
@@ -437,8 +481,9 @@ function GoToChapter({ chapters }: { chapters?: Chapter[] }) {
 
 	return (
 		<div className="chapter-list-container">
-			<button className="player-btn-xs" onClick={() => setShowChapter(prevVal => !prevVal)}>
+			<button className="player-btn-xs tool" onClick={() => setShowChapter(prevVal => !prevVal)}>
 				<img src={ChaptersSvg} alt="Chapters Icon" />
+				<span className="tooltip">Chapters</span>
 			</button>
 			<ul className={`chapters-list ${showChapter ? "show-chapters" : "hide-chapters"}`}>
 				{chapters.map((chapter, ind) => {
@@ -456,6 +501,7 @@ function GoToChapter({ chapters }: { chapters?: Chapter[] }) {
 						}}>
 							{chapter.title}
 						</button>
+						<time>{calculateDuration(chapter.startTime)}</time>
 					</li>
 				})}
 			</ul>
@@ -476,6 +522,10 @@ function ChapterContainer({ chapter, props }: { chapter: Chapter, props: { chapt
 				video_ctx?.setVideoMetadata(prevProps => ({ ...prevProps, currentTime: prevProps.atPointerTime }))
 				if (video_ctx !== null && video_ctx.videoRef.current !== null)
 					video_ctx.videoRef.current.currentTime = video_ctx?.videoMetadata.atPointerTime!;
+			}}
+			onDragStart={() => {
+				video_ctx?.setVideoMetadata(prevProps => ({ ...prevProps, currentTime: prevProps.atPointerTime }))
+
 			}}
 			onMouseMove={(e) => {
 				const timeAtPointer = chapter.startTime + props.chapterDuration * (e.nativeEvent.offsetX / e.currentTarget.clientWidth)
