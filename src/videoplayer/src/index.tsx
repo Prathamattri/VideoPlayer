@@ -308,7 +308,7 @@ export default function VideoPlayer({
 	}
 	return (
 		<VideoMetadataContext.Provider value={videoSharedContextValue}>
-			<div className="videoplayer" id="videoplayer" style={style} onDoubleClick={toggleFullScreen} onMouseMove={(e) => {
+			<div className="videoplayer" id="videoplayer" style={style} onDoubleClick={toggleFullScreen} onMouseMove={() => {
 
 				setIsControlsVisible(true)
 				clearTimeout(visibilityTimeout.current)
